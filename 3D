@@ -1,0 +1,52 @@
+# firefusion_3d.py
+# FireFusion - Thermal Anomaly Fusion Engine with 3D Visualization
+# Copyright (C) 2025 Michael Trailin
+# License: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+import numpy as np
+import rasterio
+from rasterio.merge import merge
+from skimage.transform import resize
+import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+SUPPORTED_EXTENSIONS = ['.tif', '.tiff', '.geotiff']
+
+# Load a GeoTIFF file
+
+def load_geotiff(path):
+    with rasterio.open(path) as src:
+        image = src.read(1)
+        transform = src.transform
+        print(f"[INFO] Loaded GeoTIFF {path} with shape {image.shape}")
+    return image, transform
+
+# Bicubic upscaling
+
+def upscale_bicubic(image, scale_factor=2):
+    return resize(image, (image.shape[0]*scale_factor, image.shape[1]*scale_factor), order=3, anti_aliasing=True)
+
+# 3D visualization
+
+def plot_3d_surface(image, transform):
+    y_size, x_size = image.shape
+    x = np.linspace(0, x_size, x_size)
+    y = np.linspace(0, y_size, y_size)
+    X, Y = np.meshgrid(x, y)
+    Z = image
+
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    surf = ax.plot_surface(X, Y, Z, cmap='hot')
+    plt.title("3D Thermal Surface")
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    fig.colorbar(surf, shrink=0.5, aspect=10)
+    plt.show()
+
+if __name__ == '__main__':
+    tif_path = 'data/example_input/sample.tif'
+    image, transform = load_geotiff(tif_path)
+    upscaled = upscale_bicubic(image)
+    plot_3d_surface(upscaled, transform)
