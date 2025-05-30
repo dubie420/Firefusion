@@ -12,7 +12,7 @@ Use by commercial entities, including integration into proprietary services or A
 
 Any attempt to use this codebase for profit without compliance will result in **legal enforcement under international AGPL law**.
 
-Contact: michaeltrailing@protonmail.com for commercial licensing.
+Contact: mikeydaone2319@gmail.com for commercial licensing.
 
 ### 🔄 Copyleft Notice
 
