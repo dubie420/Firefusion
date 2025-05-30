@@ -1,0 +1,28 @@
+##FireFusion - Thermal Anomaly Fusion Engine
+
+##Copyright (C) 2025 Michael Trailin
+
+##License: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+import numpy as np import rasterio import xarray as xr import os from datetime import datetime
+
+##Placeholder for fusion config
+
+def load_config(path='configs/fusion_config.yaml'): # Normally loads YAML config here return { 'spatial_resolution': 10, 'trusted_sources': ['Sentinel-2', 'VIIRS', 'MODIS'], 'qa_threshold': 0.9 }
+
+##Load satellite data from a directory or API
+
+def load_satellite_data(source_dir): files = [f for f in os.listdir(source_dir) if f.endswith('.tif')] datasets = [] for file in files: with rasterio.open(os.path.join(source_dir, file)) as src: datasets.append(src.read(1)) return np.array(datasets)
+
+##Basic thermal fusion (mean blend)
+
+def fuse_thermal_layers(layers, weights=None): if weights is None: weights = np.ones(len(layers)) / len(layers) fused = np.average(layers, axis=0, weights=weights) return fused
+
+##QA filtering using dummy mask
+
+def apply_quality_mask(image, mask): return np.where(mask > 0.8, image, np.nan)
+
+Save fused output
+
+def save_fused_image(array, output_path, ref_file): with rasterio.open(ref_file) as src: meta = src.meta meta.update(dtype=rasterio.float32, count=1
+
