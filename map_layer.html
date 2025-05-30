@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FireFusion Tiles</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+<div id="map" style="height: 100vh;"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map').setView([50, -115], 6);
+    L.tileLayer('http://localhost:8000/cog/tiles/{z}/{x}/{y}.png?url=http://localhost:8080/data/output_cog.tif', {
+        maxZoom: 14,
+        attribution: 'FireFusion'
+    }).addTo(map);
+</script>
+</body>
+</html>
