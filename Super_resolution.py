@@ -1,0 +1,180 @@
+# super_resolution.py
+# FireFusion - Thermal Anomaly Fusion Engine
+# Advanced Super-resolution Engine with Extended Multi-Source Data Ingestion, Land Classification, 3D Modeling, and API Access
+# Copyright (C) 2025 Michael Trailin & Friend
+# License: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+import numpy as np
+import rasterio
+from rasterio.merge import merge
+from skimage.transform import resize
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+import os
+import requests
+from io import BytesIO
+import zipfile
+import json
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+SUPPORTED_EXTENSIONS = ['.tif', '.tiff', '.geotiff']
+
+# Load pre-trained SR model if available
+def load_sr_model(model_path='models/sr_model.h5'):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Super-resolution model not found at {model_path}")
+    print(f"[INFO] Loaded super-resolution model from {model_path}")
+    return load_model(model_path)
+
+# Load single GeoTIFF file
+def load_geotiff(path):
+    with rasterio.open(path) as src:
+        image = src.read()
+        profile = src.profile
+        print(f"[INFO] Loaded GeoTIFF {path} with shape {image.shape}")
+    return image, profile
+
+# Merge multiple GeoTIFF files into a unified dataset
+def load_and_merge_geotiffs(paths):
+    sources = [rasterio.open(p) for p in paths]
+    mosaic, out_trans = merge(sources)
+    out_meta = sources[0].meta.copy()
+    out_meta.update({"height": mosaic.shape[1], "width": mosaic.shape[2], "transform": out_trans})
+    for src in sources:
+        src.close()
+    print(f"[INFO] Merged {len(paths)} GeoTIFF files into shape {mosaic.shape}")
+    return mosaic, out_meta
+
+# Save enhanced image to GeoTIFF
+def save_geotiff(path, data, profile):
+    profile.update(dtype=rasterio.float32, height=data.shape[1], width=data.shape[2], count=data.shape[0])
+    with rasterio.open(path, 'w', **profile) as dst:
+        dst.write(data.astype(np.float32))
+    print(f"[INFO] Saved super-res output to {path}")
+
+# Apply CNN-based super-resolution
+def upscale_cnn(image, model):
+    image = image.astype('float32') / 255.0
+    image = np.transpose(image, (1, 2, 0))
+    image = np.expand_dims(image, axis=0)
+    sr_output = model.predict(image)
+    sr_output = np.squeeze(sr_output)
+    sr_output = np.transpose(sr_output, (2, 0, 1)) * 255.0
+    return sr_output.astype(np.float32)
+
+# Fallback bicubic interpolation for each band
+def upscale_bicubic(image, scale_factor=2):
+    return np.stack([
+        resize(image[i], (image.shape[1] * scale_factor, image.shape[2] * scale_factor), order=3, anti_aliasing=True)
+        for i in range(image.shape[0])
+    ])
+
+# Download remote dataset via API
+def fetch_remote_dataset(api_url, token=None, params=None, extract_path='data/api_input'):
+    headers = {'Authorization': f'Bearer {token}'} if token else {}
+    print(f"[INFO] Fetching remote dataset from {api_url}")
+    response = requests.get(api_url, params=params, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch data from API: {response.status_code}")
+    zip_content = zipfile.ZipFile(BytesIO(response.content))
+    zip_content.extractall(extract_path)
+    print(f"[INFO] Extracted API dataset to {extract_path}")
+    return [os.path.join(extract_path, f) for f in zip_content.namelist() if any(f.endswith(ext) for ext in SUPPORTED_EXTENSIONS)]
+
+# Read metadata JSON index if available
+def read_metadata_index(index_path):
+    with open(index_path, 'r') as f:
+        data = json.load(f)
+    print(f"[INFO] Loaded metadata index from {index_path} with {len(data)} entries")
+    return data
+
+# Discover additional local datasets in directory
+def discover_local_sources(base_dir='data/extra_sources'):
+    discovered = []
+    for root, _, files in os.walk(base_dir):
+        for file in files:
+            if any(file.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
+                discovered.append(os.path.join(root, file))
+    print(f"[INFO] Discovered {len(discovered)} additional local source files")
+    return discovered
+
+# Integrate land classification overlay
+def apply_land_classification(sr_image, classification_mask):
+    print("[INFO] Applying land classification overlay")
+    overlayed = np.copy(sr_image)
+    for i in range(min(sr_image.shape[0], classification_mask.shape[0])):
+        overlayed[i] = sr_image[i] * (classification_mask[i] > 0)
+    return overlayed
+
+# Visualize a 3D terrain or anomaly layer
+
+def render_3d_model(image, title='3D Visualization'):
+    print("[INFO] Rendering 3D model")
+    if image.shape[0] < 1:
+        raise ValueError("Image must have at least one band to render in 3D")
+    z_data = image[0]  # Assume first band is elevation or thermal anomaly
+    x_data = np.arange(z_data.shape[1])
+    y_data = np.arange(z_data.shape[0])
+    X, Y = np.meshgrid(x_data, y_data)
+
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(X, Y, z_data, cmap='hot')
+    ax.set_title(title)
+    plt.show()
+
+if __name__ == '__main__':
+    try:
+        api_url = 'https://example.com/satellite_data_api/data.zip'
+        api_token = os.getenv('SAT_API_TOKEN')
+        api_tifs = fetch_remote_dataset(api_url, token=api_token)
+    except Exception as e:
+        print(f"[WARN] Failed to fetch API data: {e}")
+        api_tifs = []
+
+    try:
+        metadata = read_metadata_index('data/api_input/index.json')
+    except Exception as e:
+        print(f"[INFO] Metadata index not found or unreadable: {e}")
+        metadata = {}
+
+    local_tifs = [
+        'data/example_input/sample.tif',
+        'data/example_input/supplemental_viirs.tif',
+        'data/example_input/sentinel2_band.tif'
+    ]
+    extra_tifs = discover_local_sources()
+
+    tif_paths = api_tifs + extra_tifs if api_tifs or extra_tifs else local_tifs
+    output_path = 'data/fused_output/super_res.tif'
+
+    try:
+        image, profile = load_and_merge_geotiffs(tif_paths)
+    except Exception as e:
+        print(f"[ERROR] Failed to load and merge GeoTIFFs: {e}")
+        exit(1)
+
+    try:
+        model = load_sr_model()
+        sr_image = upscale_cnn(image, model)
+        print(f"[INFO] CNN super-res output shape: {sr_image.shape}")
+    except Exception as e:
+        print(f"[WARN] CNN model failed: {e}. Using bicubic fallback.")
+        sr_image = upscale_bicubic(image)
+        print(f"[INFO] Bicubic super-res output shape: {sr_image.shape}")
+
+    # Optional land classification overlay
+    try:
+        classification_mask, _ = load_geotiff('data/classification/mask.tif')
+        sr_image = apply_land_classification(sr_image, classification_mask)
+    except Exception as e:
+        print(f"[INFO] No land classification overlay applied: {e}")
+
+    save_geotiff(output_path, sr_image, profile)
+
+    # 3D visualization
+    try:
+        render_3d_model(sr_image, title='Super-Resolution 3D Output')
+    except Exception as e:
+        print(f"[INFO] 3D render failed: {e}")
