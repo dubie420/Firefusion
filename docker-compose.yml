@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  tiles:
+    build:
+      context: .
+      dockerfile: Dockerfile.tile
+    ports:
+      - "8000:80"
+    volumes:
+      - ./data:/data
