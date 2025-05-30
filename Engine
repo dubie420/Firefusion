@@ -1,0 +1,74 @@
+# FireFusion - Thermal Anomaly Fusion Engine
+# Copyright (C) 2025 Michael Trailin with friend
+# License: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+import numpy as np
+import rasterio
+import xarray as xr
+import os
+import yaml
+import logging
+from datetime import datetime
+
+logging.basicConfig(level=logging.INFO)
+
+# ---------------------------- CONFIG ---------------------------- #
+
+def load_config(path='configs/fusion_config.yaml'):
+    with open(path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
+
+# ---------------------------- DATA LOAD ---------------------------- #
+
+def load_satellite_data(source_dir):
+    files = [f for f in os.listdir(source_dir) if f.endswith('.tif')]
+    datasets = []
+    for file in files:
+        with rasterio.open(os.path.join(source_dir, file)) as src:
+            datasets.append(src.read(1))
+    return np.array(datasets)
+
+# ---------------------------- FUSION ---------------------------- #
+
+def fuse_thermal_layers(layers, weights=None):
+    if weights is None:
+        weights = np.ones(len(layers)) / len(layers)
+    fused = np.average(layers, axis=0, weights=weights)
+    return fused
+
+# ---------------------------- QA FILTER ---------------------------- #
+
+def apply_quality_mask(image, mask):
+    return np.where(mask > 0.8, image, np.nan)
+
+# ---------------------------- SAVE OUTPUT ---------------------------- #
+
+def save_fused_image(array, output_path, ref_file):
+    with rasterio.open(ref_file) as src:
+        meta = src.meta
+        meta.update(dtype=rasterio.float32, count=1)
+
+        with rasterio.open(output_path, 'w', **meta) as dst:
+            dst.write(array.astype(rasterio.float32), 1)
+
+    logging.info(f"Fused image saved to {output_path}")
+
+# ---------------------------- PIPELINE ---------------------------- #
+
+def run_fusion_pipeline():
+    config = load_config()
+    logging.info("Loaded configuration")
+
+    data_dir = config.get('data_dir', 'data/')
+    output_path = config.get('output_path', 'output/fused_output.tif')
+    ref_file = config.get('ref_file', 'reference.tif')
+
+    layers = load_satellite_data(data_dir)
+    logging.info(f"Loaded {len(layers)} layers from {data_dir}")
+
+    fused = fuse_thermal_layers(layers)
+    save_fused_image(fused, output_path, ref_file)
+
+if __name__ == '__main__':
+    run_fusion_pipeline()
