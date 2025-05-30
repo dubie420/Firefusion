@@ -1,30 +1,19 @@
-# FireFusion - Thermal Anomaly Fusion Engine
-# Copyright (C) 2025 [MICHAEL TRAILIN]
-# License: GNU Affero General Public License v3.0 (AGPL-3.0)# Firefusion
-# FireFusion 🔥🌍
+# FireFusion
 
-**FireFusion** is an open-source, super-resolution Earth observation engine that blends satellite data from Sentinel, VIIRS, MODIS, and Landsat to detect and map thermal anomalies at unprecedented detail.
+FireFusion is a thermal anomaly fusion engine with 3D visualization capabilities.
 
-## Features
-- 🛰️ Multi-sensor fusion (thermal + gas)
-- 📏 Super-resolved to 10–30m
-- ☁️ Cloud masking & QA filtering
-- 🔒 Fully open-source, AGPL-3 protected
-- 🧠 Optional ML-based upscaling (GAN/CNN)
+## 🔒 License & Use Policy
 
-## Tech Stack
-- Python, NumPy, Rasterio, Xarray
-- Streamlit / Leaflet for UI
-- Optional: TensorFlow/PyTorch for ML
+This project is licensed under the **GNU Affero General Public License v3.0**.
 
-## License
-GNU AGPLv3 — use it, remix it, but share it back.
+### 🚫 Commercial Use
 
-## Contributors
-- [MICHAELTRAILIN]
-- Community contributors welcome!
+Use by commercial entities, including integration into proprietary services or APIs, is strictly forbidden without **explicit written permission** from the author.
 
-## Roadmap
-- [ ] Modular plugin architecture
-- [ ] Live tile server (ZXY)
-- [ ] Edge deployment (Jetson, Pi)
+Any attempt to use this codebase for profit without compliance will result in **legal enforcement under international AGPL law**.
+
+Contact: michaeltrailing@protonmail.com for commercial licensing.
+
+### 🔄 Copyleft Notice
+
+Any modified versions must also be licensed under AGPL-3.0 and made publicly available.
