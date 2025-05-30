@@ -1,42 +1,63 @@
-FireFusion - Thermal Anomaly Fusion Engine
+# FireFusion - Thermal Anomaly Fusion Engine
+# Copyright (C) 2025 Michael Trailin
+# License: GNU Affero General Public License v3.0 (AGPL-3.0)
 
-Copyright (C) 2025 Michael Trailin
+import numpy as np
+import rasterio
+import xarray as xr
+import os
+from datetime import datetime
 
-License: GNU Affero General Public License v3.0 (AGPL-3.0)
+# Placeholder for fusion config
+def load_config(path='configs/fusion_config.yaml'):
+    # Normally loads YAML config here
+    return {
+        'spatial_resolution': 10,
+        'trusted_sources': ['Sentinel-2', 'VIIRS', 'MODIS'],
+        'qa_threshold': 0.9
+    }
 
-import numpy as np import rasterio import xarray as xr import os import yaml import logging from datetime import datetime
+# Load satellite data from a directory or API
+def load_satellite_data(source_dir):
+    files = [f for f in os.listdir(source_dir) if f.endswith('.tif')]
+    datasets = []
+    for file in files:
+        with rasterio.open(os.path.join(source_dir, file)) as src:
+            datasets.append(src.read(1))
+    return np.array(datasets)
 
-logging.basicConfig(level=logging.INFO)
+# Basic thermal fusion (mean blend)
+def fuse_thermal_layers(layers, weights=None):
+    if weights is None:
+        weights = np.ones(len(layers)) / len(layers)
+    fused = np.average(layers, axis=0, weights=weights)
+    return fused
 
----------------------------- CONFIG ----------------------------
+# QA filtering using dummy mask
+def apply_quality_mask(image, mask):
+    return np.where(mask > 0.8, image, np.nan)
 
-def load_config(path='configs/fusion_config.yaml'): with open(path, 'r') as f: config = yaml.safe_load(f) return config
+# Save fused output
+def save_fused_image(array, output_path, ref_file):
+    with rasterio.open(ref_file) as src:
+        meta = src.meta
+    meta.update(dtype=rasterio.float32, count=1)
+    with rasterio.open(output_path, 'w', **meta) as dst:
+        dst.write(array.astype(np.float32), 1)
 
----------------------------- DATA LOAD ----------------------------
+# Main pipeline
+if __name__ == '__main__':
+    config = load_config()
+    print(f"[INFO] FireFusion started at {datetime.now()}")
 
-def load_satellite_data(source_dir): files = [f for f in os.listdir(source_dir) if f.endswith('.tif')] datasets = [] for file in files: with rasterio.open(os.path.join(source_dir, file)) as src: datasets.append(src.read(1)) return np.array(datasets)
+    data = load_satellite_data('data/example_input')
+    print(f"[INFO] Loaded {data.shape[0]} thermal layers")
 
----------------------------- FUSION ----------------------------
+    # Placeholder mask
+    quality_mask = np.random.rand(*data[0].shape)
 
-def fuse_thermal_layers(layers, weights=None): if weights is None: weights = np.ones(len(layers)) / len(layers) fused = np.average(layers, axis=0, weights=weights) return fused
+    fused = fuse_thermal_layers(data)
+    fused_filtered = apply_quality_mask(fused, quality_mask)
 
----------------------------- QA FILTER ----------------------------
-
-def apply_quality_mask(image, mask): return np.where(mask > 0.8, image, np.nan)
-
----------------------------- SAVE OUTPUT ----------------------------
-
-def save_fused_image(array, output_path, ref_file): with rasterio.open(ref_file) as src: meta = src.meta meta.update(dtype=rasterio.float32, count=1)
-
-with rasterio.open(output_path, 'w', **meta) as dst:
-        dst.write(array.astype(rasterio.float32), 1)
-
-logging.info(f"Fused image saved to {output_path}")
-
----------------------------- PIPELINE ----------------------------
-
-def run_fusion_pipeline(): config = load_config() logging.info("Loaded configuration")
-
-data_dir = config.get('data_dir', 'data/')
-output_path =
-
+    save_fused_image(fused_filtered, 'data/fused_output/fused_image.tif', 'data/example_input/sample.tif')
+    print(f"[INFO] Fusion complete. Output saved.")
