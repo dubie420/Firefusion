@@ -1,0 +1,51 @@
+# Fusion Engine Configuration
+
+spatial_resolution: 10  # in meters
+data_dir: data/  # Directory containing input .tif files
+output_path: output/fused_output.tif  # Where to save fused output
+ref_file: reference.tif  # Reference GeoTIFF file for metadata
+
+trusted_sources:
+  - Sentinel-2
+  - VIIRS
+  - MODIS
+  - Landsat-8
+  - Landsat-9
+  - GOES-R Series
+  - TerraSAR-X
+  - PlanetScope
+  - OS-level thermal sensors (Linux, Windows WMI, macOS IOKit)
+  - Copernicus EMS
+  - NOAA NCEI
+  - Himawari-8
+  - Airborne IR Drones
+  - Thermal camera networks (FLIR, Hikvision)
+  - Ground sensor networks (IoT environmental/thermal arrays)
+  - Crowdsourced data (via approved mobile sensor platforms)
+  - Local meteorological and climate observatories
+
+qa_threshold: 0.9  # Quality mask threshold (0.0 - 1.0)
+fusion_strategy: mean  # Options: mean, weighted, anomaly_weighted
+logging_level: INFO  # Options: DEBUG, INFO, WARNING, ERROR
+
+use_anomaly_detection: false  # Enable anomaly detection during fusion
+anomaly_sensitivity: 1.5  # Z-score threshold if anomaly detection is used
+
+enhanced_visualization:
+  enable_overlay: true  # Overlay supplementary layers for better visual context
+  overlay_sources:
+    - NDVI (Normalized Difference Vegetation Index)
+    - LST (Land Surface Temperature)
+    - Precipitation Heat Maps
+    - Urban Heat Island Layers
+    - Cloud Cover Analysis
+    - Elevation & Terrain Data (DEM)
+    - Historical thermal anomaly archive
+  overlay_opacity: 0.5  # Blend level for visualization overlays
+
+validation_methods:
+  cross_source_comparison: true
+  temporal_consistency_check: true
+  spatial_resolution_interpolation: true
+  confidence_threshold: 0.85
+  use_statistical_resampling: true
