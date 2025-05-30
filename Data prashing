@@ -1,0 +1,28 @@
+data_parsing.py - FireFusion Data Parsers
+
+import os import numpy as np import rasterio import json import logging from pathlib import Path from typing import Dict, Any
+
+logging.basicConfig(level=logging.INFO)
+
+------------- GeoTIFF Loader -------------
+
+def load_geotiff(file_path: str) -> np.ndarray: with rasterio.open(file_path) as src: return src.read(1)
+
+------------- JSON Sensor Parser -------------
+
+def parse_json_sensor(file_path: str) -> Dict[str, Any]: with open(file_path, 'r') as f: return json.load(f)
+
+------------- OS-Level Thermal Parser -------------
+
+def parse_os_sensor(file_path: str) -> float: with open(file_path, 'r') as f: raw = f.read().strip() try: return float(raw) except ValueError: logging.warning(f"Could not parse temperature from {file_path}") return np.nan
+
+------------- Dummy NetCDF Parser -------------
+
+try: import netCDF4 except ImportError: netCDF4 = None
+
+def load_netcdf_variable(file_path: str, variable: str) -> np.ndarray: if netCDF4 is None: raise ImportError("netCDF4 is not installed.") ds = netCDF4.Dataset(file_path) return ds.variables[variable][:]
+
+------------- General File Router -------------
+
+def parse_file(file_path: str) -> Any: ext = Path(file_path).suffix.lower() if ext == '.tif': return load_geotiff(file_path) elif ext == '.json': return parse_json_sensor(file_path) elif ext in ['.txt', '.log']: return parse_os_sensor(file_path) elif ext ==
+
